@@ -71,17 +71,15 @@ pipeline {
                     if ! command -v allure &> /dev/null; then
                         echo "Allure not found, installing..."
 
-                        # Скачиваем Allure
-                        wget -q -O allure-2.27.0.tgz https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
+                        # Скачиваем Allure с помощью curl (работает на macOS)
+                        echo "Downloading Allure with curl..."
+                        curl -L -o allure-2.27.0.tgz https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
 
                         # Распаковываем
                         tar -xvzf allure-2.27.0.tgz
 
                         # Делаем исполняемым
                         chmod +x allure-2.27.0/bin/allure
-
-                        # Добавляем в PATH для текущей сессии
-                        export PATH="$PWD/allure-2.27.0/bin:$PATH"
 
                         echo "Allure version:"
                         ./allure-2.27.0/bin/allure --version
