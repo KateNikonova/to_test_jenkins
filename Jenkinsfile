@@ -1,13 +1,8 @@
 pipeline {
     agent any
 
-    tools {
-        python 'Python3'  // Название установленного Python в Jenkins
-    }
-
     environment {
         API_BASE_URL = 'http://5.101.50.27:8000'
-        // Токен можно добавить через Jenkins Credentials
     }
 
     stages {
@@ -19,19 +14,25 @@ pipeline {
 
         stage('Setup Python') {
             steps {
-                script {
-                    echo "Python version:"
-                    sh 'python --version'
-                    sh 'pip --version'
-                }
+                sh '''
+                    echo "=== Checking Python Installation ==="
+                    which python3 || which python
+                    python3 --version || python --version
+                    pip3 --version || pip --version
+                    echo "=== Current directory ==="
+                    pwd
+                    ls -la
+                '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    pip install -r requirements.txt
-                    python -c "import requests; print(f'Requests version: {requests.__version__}')"
+                    echo "=== Installing Python Dependencies ==="
+                    pip3 install -r requirements.txt || pip install -r requirements.txt
+                    echo "=== Installed packages ==="
+                    pip3 list || pip list
                 '''
             }
         }
@@ -39,48 +40,49 @@ pipeline {
         stage('Run API Tests') {
             steps {
                 sh '''
-                    python run_tests.py
+                    echo "=== Running API Tests ==="
+                    python3 run_tests.py || python run_tests.py
+                    echo "=== Test execution completed ==="
                 '''
             }
             post {
                 always {
-                    // Сохраняем отчеты
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '.',
-                        reportFiles: 'test-report.html',
-                        reportName: 'Python Test Report'
-                    ])
-                    junit 'test-results.xml'
-                }
-            }
-        }
+                    script {
+                        // Публикуем HTML отчет если он есть
+                        if (fileExists('test-report.html')) {
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: '.',
+                                reportFiles: 'test-report.html',
+                                reportName: 'Python Test Report'
+                            ])
+                        }
 
-        stage('Security Scan') {
-            steps {
-                sh '''
-                    echo "Running basic security checks..."
-                    pip list
-                    # Можно добавить safety check или bandit
-                '''
+                        // Публикуем JUnit отчет если он есть
+                        if (fileExists('test-results.xml')) {
+                            junit 'test-results.xml'
+                        }
+                    }
+                }
             }
         }
     }
 
     post {
         always {
-            echo "Pipeline execution completed"
-            cleanWs()  // Очистка workspace
+            echo "=== Pipeline execution completed ==="
+            script {
+                // Очистка workspace (опционально)
+                cleanWs()
+            }
         }
         success {
             echo "✅ All tests passed successfully!"
-            // Можно добавить уведомления
         }
         failure {
             echo "❌ Some tests failed!"
-            // Можно добавить уведомления об ошибках
         }
     }
 }
